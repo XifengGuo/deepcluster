@@ -18,13 +18,13 @@ class SmallVGG(nn.Module):
         super(SmallVGG, self).__init__()
         self.features = features
         self.classifier = nn.Sequential(
-            nn.Linear(64 * 7 * 7, 512),
+            nn.Linear(64 * 3 * 3, 128),
             nn.ReLU(True),
             nn.Dropout(0.5),
-            nn.Linear(512, 512),
+            nn.Linear(128, 128),
             nn.ReLU(True)
         )
-        self.top_layer = nn.Linear(512, num_classes)
+        self.top_layer = nn.Linear(128, num_classes)
         self._initialize_weights()
         if sobel:
             # grayscale = nn.Conv2d(3, 1, kernel_size=1, stride=1, padding=0)
@@ -74,7 +74,7 @@ class SmallVGG(nn.Module):
 def make_layers(input_dim, batch_norm):
     layers = []
     in_channels = input_dim
-    cfg = [32, 32, 'M', 64, 64, 'M']#, 128, 128, 128, 'M']
+    cfg = [16, 16, 'M', 32, 32, 'M', 64, 64, 64, 'M']
     for v in cfg:
         if v == 'M':
             layers += [nn.MaxPool2d(kernel_size=2, stride=2)]
@@ -89,6 +89,6 @@ def make_layers(input_dim, batch_norm):
 
 
 def smallvgg(sobel=False, bn=True, out=10):
-    dim = 2 + int(not sobel)
+    dim = 2 if sobel else 1
     model = SmallVGG(make_layers(dim, bn), out, sobel)
     return model

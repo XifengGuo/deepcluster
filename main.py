@@ -30,7 +30,7 @@ parser = argparse.ArgumentParser(description='PyTorch Implementation of DeepClus
 
 parser.add_argument('data', metavar='DIR', help='path to dataset')
 parser.add_argument('--arch', '-a', type=str, metavar='ARCH',
-                    choices=['alexnet', 'vgg16'], default='alexnet',
+                    choices=['alexnet', 'vgg16', 'smallvgg'], default='alexnet',
                     help='CNN architecture (default: alexnet)')
 parser.add_argument('--sobel', action='store_true', help='Sobel filtering')
 parser.add_argument('--clustering', type=str, choices=['Kmeans', 'PIC'],
@@ -46,7 +46,7 @@ parser.add_argument('--reassign', type=float, default=1.,
                     reassignments of clusters (default: 1)""")
 parser.add_argument('--workers', default=1, type=int,
                     help='number of data loading workers (default: 4)')
-parser.add_argument('--epochs', type=int, default=200,
+parser.add_argument('--epochs', type=int, default=20,
                     help='number of total epochs to run (default: 200)')
 parser.add_argument('--start_epoch', default=0, type=int,
                     help='manual epoch number (useful on restarts) (default: 0)')
@@ -123,8 +123,24 @@ def main():
 
     # load the data
     end = time.time()
+    # MNIST-full begin:-------------------------------------------
     dataset = datasets.MNIST('./data', train=True, download=True,
                              transform=transforms.Compose(tra))
+    true_label = dataset.train_labels.cpu().numpy()
+    # MNIST-full end:-------------------------------------------
+
+    # # FMNIST begin:-------------------------------------------
+    # dataset = datasets.FashionMNIST('./data/fmnist', train=True, download=True,
+    #                          transform=transforms.Compose(tra))
+    # true_label = dataset.train_labels.cpu().numpy()
+    # # FMNIST end:-------------------------------------------
+
+    # # MNIST-test begin:-------------------------------------------
+    # dataset = datasets.MNIST('./data', train=False, download=True,
+    #                          transform=transforms.Compose(tra))
+    # true_label = dataset.test_labels.cpu().numpy()
+    # # MNIST-test end:-------------------------------------------
+
     # dataset = datasets.ImageFolder(args.data, transform=transforms.Compose(tra))
     # if args.verbose: print('Load dataset: {0:.2f} s'.format(time.time() - end))
     dataloader = torch.utils.data.DataLoader(dataset,
@@ -150,6 +166,8 @@ def main():
         clustering_loss = deepcluster.cluster(features, verbose=args.verbose)
 
         # assign pseudo-labels
+        # train_dataset = clustering.cluster_assign(deepcluster.images_lists,
+        #                                           dataset.train_data)
         train_dataset = clustering.cluster_assign(deepcluster.images_lists,
                                                   dataset.train_data)
 
@@ -180,17 +198,20 @@ def main():
 
         # print log
         if args.verbose:
-            print('###### Epoch [{0}] ###### \n'
-                  'Time: {1:.3f} s\n'
-                  'Clustering loss: {2:.3f} \n'
-                  'ConvNet loss: {3:.3f}'
-                  .format(epoch, time.time() - end, clustering_loss, loss))
+            # print('###### Epoch [{0}] ###### \n'
+            #       'Time: {1:.3f} s\n'
+            #       'Clustering loss: {2:.3f} \n'
+            #       'ConvNet loss: {3:.3f}'
+            #       .format(epoch, time.time() - end, clustering_loss, loss))
             try:
-                nmi = normalized_mutual_info_score(
-                    clustering.arrange_clustering(deepcluster.images_lists),
-                    clustering.arrange_clustering(cluster_log.data[-1])
-                )
-                print('NMI against previous assignment: {0:.3f}'.format(nmi))
+                y_pred = clustering.arrange_clustering(deepcluster.images_lists)
+                y_last = clustering.arrange_clustering(cluster_log.data[-1])
+                import metrics
+                acc = metrics.acc(y_pred, y_last)
+                nmi = metrics.nmi(y_pred, y_last)
+                acc_ = metrics.acc(true_label, y_pred)
+                nmi_ = metrics.nmi(true_label, y_pred)
+                print('ACC=%.4f, NMI=%.4f;  Relative ACC=%.4f, Relative NMI=%.4f' % (acc_, nmi_, acc, nmi))
             except IndexError:
                 pass
             print('####################### \n')

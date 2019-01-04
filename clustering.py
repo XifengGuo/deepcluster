@@ -73,7 +73,7 @@ class ReassignedDataset(data.Dataset):
         return len(self.imgs)
 
 
-def preprocess_features(npdata, pca=256):
+def preprocess_features(npdata, pca=32):
     """Preprocess an array of features.
     Args:
         npdata (np.array N * ndim): features to preprocess
@@ -137,8 +137,8 @@ def cluster_assign(images_lists, dataset):
         image_indexes.extend(images)
         pseudolabels.extend([cluster] * len(images))
 
-    t = [transforms.ToTensor(),
-         transforms.Normalize((0.1307,), (0.3081,))]
+    t = transforms.Compose([transforms.ToTensor(),
+                            transforms.Normalize((0.1307,), (0.3081,))])
 
     return ReassignedDataset(image_indexes, pseudolabels, dataset, t)
 
@@ -167,8 +167,8 @@ def run_kmeans(x, nmb_clusters, verbose=False):
     clus.train(x, index)
     _, I = index.search(x, 1)
     losses = faiss.vector_to_array(clus.obj)
-    if verbose:
-        print('k-means loss evolution: {0}'.format(losses))
+    # if verbose:
+        # print('k-means loss evolution: {0}'.format(losses))
 
     return [int(n[0]) for n in I], losses[-1]
 
@@ -181,6 +181,15 @@ def arrange_clustering(images_lists):
         pseudolabels.extend([cluster] * len(images))
     indexes = np.argsort(image_indexes)
     return np.asarray(pseudolabels)[indexes]
+
+def arrange_clustering2(images_lists, y):
+    pseudolabels = []
+    image_indexes = []
+    for cluster, images in enumerate(images_lists):
+        image_indexes.extend(images)
+        pseudolabels.extend([cluster] * len(images))
+    indexes = np.argsort(image_indexes)
+    return y[indexes]
 
 
 class Kmeans:

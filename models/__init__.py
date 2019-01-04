@@ -6,3 +6,4 @@
 #
 from .vgg16 import *
 from .alexnet import *
+from .small_vgg import *

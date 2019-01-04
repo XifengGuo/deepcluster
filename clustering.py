@@ -51,9 +51,9 @@ class ReassignedDataset(data.Dataset):
         label_to_idx = {label: idx for idx, label in enumerate(set(pseudolabels))}
         images = []
         for j, idx in enumerate(image_indexes):
-            path = dataset[idx][0]
+            image = dataset[idx]
             pseudolabel = label_to_idx[pseudolabels[j]]
-            images.append((path, pseudolabel))
+            images.append((image, pseudolabel))
         return images
 
     def __getitem__(self, index):
@@ -63,8 +63,8 @@ class ReassignedDataset(data.Dataset):
         Returns:
             tuple: (image, pseudolabel) where pseudolabel is the cluster of index datapoint
         """
-        path, pseudolabel = self.imgs[index]
-        img = pil_loader(path)
+        img, pseudolabel = self.imgs[index]
+        img = Image.fromarray(img.numpy(), mode='L')
         if self.transform is not None:
             img = self.transform(img)
         return img, pseudolabel
@@ -137,12 +137,8 @@ def cluster_assign(images_lists, dataset):
         image_indexes.extend(images)
         pseudolabels.extend([cluster] * len(images))
 
-    normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                     std=[0.229, 0.224, 0.225])
-    t = transforms.Compose([transforms.RandomResizedCrop(224),
-                            transforms.RandomHorizontalFlip(),
-                            transforms.ToTensor(),
-                            normalize])
+    t = [transforms.ToTensor(),
+         transforms.Normalize((0.1307,), (0.3081,))]
 
     return ReassignedDataset(image_indexes, pseudolabels, dataset, t)
 

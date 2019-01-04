@@ -35,7 +35,7 @@ parser.add_argument('--arch', '-a', type=str, metavar='ARCH',
 parser.add_argument('--sobel', action='store_true', help='Sobel filtering')
 parser.add_argument('--clustering', type=str, choices=['Kmeans', 'PIC'],
                     default='Kmeans', help='clustering algorithm (default: Kmeans)')
-parser.add_argument('--nmb_cluster', '--k', type=int, default=10000,
+parser.add_argument('--nmb_cluster', '--k', type=int, default=10,
                     help='number of cluster for k-means (default: 10000)')
 parser.add_argument('--lr', default=0.05, type=float,
                     help='learning rate (default: 0.05)')
@@ -44,7 +44,7 @@ parser.add_argument('--wd', default=-5, type=float,
 parser.add_argument('--reassign', type=float, default=1.,
                     help="""how many epochs of training between two consecutive
                     reassignments of clusters (default: 1)""")
-parser.add_argument('--workers', default=4, type=int,
+parser.add_argument('--workers', default=1, type=int,
                     help='number of data loading workers (default: 4)')
 parser.add_argument('--epochs', type=int, default=200,
                     help='number of total epochs to run (default: 200)')
@@ -118,17 +118,15 @@ def main():
     cluster_log = Logger(os.path.join(args.exp, 'clusters'))
 
     # preprocessing of data
-    normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                     std=[0.229, 0.224, 0.225])
-    tra = [transforms.Resize(256),
-           transforms.CenterCrop(224),
-           transforms.ToTensor(),
-           normalize]
+    tra = [transforms.ToTensor(),
+           transforms.Normalize((0.1307,), (0.3081,))]
 
     # load the data
     end = time.time()
-    dataset = datasets.ImageFolder(args.data, transform=transforms.Compose(tra))
-    if args.verbose: print('Load dataset: {0:.2f} s'.format(time.time() - end))
+    dataset = datasets.MNIST('./data', train=True, download=True,
+                             transform=transforms.Compose(tra))
+    # dataset = datasets.ImageFolder(args.data, transform=transforms.Compose(tra))
+    # if args.verbose: print('Load dataset: {0:.2f} s'.format(time.time() - end))
     dataloader = torch.utils.data.DataLoader(dataset,
                                              batch_size=args.batch,
                                              num_workers=args.workers,
@@ -153,7 +151,7 @@ def main():
 
         # assign pseudo-labels
         train_dataset = clustering.cluster_assign(deepcluster.images_lists,
-                                                  dataset.imgs)
+                                                  dataset.train_data)
 
         # uniformely sample per target
         sampler = UnifLabelSampler(int(args.reassign * len(train_dataset)),

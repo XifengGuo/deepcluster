@@ -1,6 +1,7 @@
 **/.*.swp
 *.ipynb
 **/*.pyc
+/.idea/
 *.pyc
 .ipynb_checkpoints
 third-parties/
